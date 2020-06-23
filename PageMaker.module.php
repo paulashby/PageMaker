@@ -28,8 +28,7 @@ class PageMaker extends WireData implements Module {
     // Check if fields exist
     foreach($setup['fields'] as $f => $spec) {
       $curr_f = wire('fields')->get($names[$f]);
-      bd('Looking for ' . $names[$f]);
-      bd($curr_f);
+      
       if($curr_f !== null) {
         $errors['fields'][] = $names[$f];
       }
@@ -37,8 +36,7 @@ class PageMaker extends WireData implements Module {
 
     foreach ($setup['templates'] as $t => $spec) {
       $curr_t = $this->templates->get($names[$t]);
-      bd('Looking for ' . $names[$t]);
-      bd($curr_t);
+
       if( $curr_t !== null) {
         $errors['templates'][] = $names[$t];
       }
