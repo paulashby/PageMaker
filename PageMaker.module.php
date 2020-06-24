@@ -204,10 +204,6 @@ class PageMaker extends WireData implements Module {
  */
   public function makePage($spec) {
 
-    $spec_type = gettype($spec);
-
-    bd("spec is $spec_type");
-    
     $p = $this->wire(new Page());
     $p->template = $spec['template']; 
     $p->parent = $spec['parent'];
