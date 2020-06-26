@@ -10,12 +10,14 @@
  */
 $config = array(
 	
-	'firstField' => array(
-		'name'=> 'err_mssg',
-		'type' => 'text', 
-		'label' => 'Error message',
-		'description' => 'Shown if the module cannot be uninstalled due to created templates remaining in the tree. Feel free to enter a custom message to suit your needs', 
-		'value' => 'Unable to uninstall the module as existing pages are using templates created by PageMaker', 
+	'removeCreated' => array(
+		'name'=> 'rmv_created',
+		'type' => 'checkbox', 
+		'label' => 'Remove pages on uninstall?',
+		'autocheck' => 0,
+		'checkedValue' => 1,
+		'uncheckedValue' => 0,
+		'value' => $this->rmv_created,
 		'required' => false 
 	)
 );
