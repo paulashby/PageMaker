@@ -18,7 +18,7 @@ class PageMaker extends WireData implements Module {
  * @param array $setup Array of elements to check ['fields' Array of strings , 'templates' Array of strings]
  * @return array of errors or boolean true
  */
-  protected function preflightInstall($setup, $names) {
+  protected function preflightInstall($setup) {
 
     $errors = array(
       'fields' => array(),
@@ -27,18 +27,18 @@ class PageMaker extends WireData implements Module {
 
     // Check if fields exist
     foreach($setup['fields'] as $f => $spec) {
-      $curr_f = wire('fields')->get($names[$f]);
+      $curr_f = wire('fields')->get($f);
       
       if($curr_f !== null) {
-        $errors['fields'][] = $names[$f];
+        $errors['fields'][] = $f;
       }
     }
 
     foreach ($setup['templates'] as $t => $spec) {
-      $curr_t = $this->templates->get($names[$t]);
+      $curr_t = $this->templates->get($t);
 
       if( $curr_t !== null) {
-        $errors['templates'][] = $names[$t];
+        $errors['templates'][] = $t;
       }
     }
     if(count($errors['fields']) || count($errors['templates'])) {
@@ -63,49 +63,25 @@ class PageMaker extends WireData implements Module {
  * @param Array $names field_name_from_data_param => name_string ($data being first parameter)
  * @return array of errors or boolean true
  */
-  public function makePages($setup, $names) {
+  public function makePages($setup) {
 
-    $installable = $this->preflightInstall(array('fields' => $setup['fields'], 'templates' => $setup['templates']), $names);
+    $installable = $this->preflightInstall(array('fields' => $setup['fields'], 'templates' => $setup['templates']));
 
     if($installable === true){
 
       foreach ($setup['fields'] as $key => $spec) {
-        $spec['name'] = $this->nameFromHandle($key, $names, 'field');
+        $spec['name'] = $key;
         $this->makeField($spec);
       }
-
-      $templates_spec = array(); // Save template spec for setTemplateFamily
-
       foreach ($setup['templates'] as $key => $spec) { 
-        $spec['name'] = $this->nameFromHandle($key, $names, 'template');
-
-        // Change field handles to actual field names
-        foreach ($spec as $specitem => &$handles) {
-          if($specitem !== 'name') {
-            $el_type = substr($specitem, 2); // remove the first 2 chars
-
-            //TODO: PageMaker shouldn't be concerned with this - do in ProcessOrderPages
-
-            // Replace handles with corresponding live names
-            $named_handles = array();
-            foreach ($handles as $h) { // Array of template handles to replace
-              $named_handles[] = $this->nameFromHandle($h, $names, $el_type);
-            }
-            $handles = $named_handles;
-          }
-        }
-        unset($handles);
-        
-        $templates_spec[$key] = $spec; 
+        $spec['name'] = $key;
         $this->makeTemplate($spec);
       }
-      foreach ($templates_spec as $key => $spec) {
-
+      foreach ($setup['templates'] as $key => $spec) {
+        $spec['name'] = $key;
         $this->setTemplateFamily($spec);
-       
       }
       foreach ($setup['pages'] as $key => $spec) {
-        $spec['template'] = $this->nameFromHandle($spec['template'], $names, 'template');
         $spec['name'] = $key;
         $this->makePage($spec);
       }
@@ -115,7 +91,6 @@ class PageMaker extends WireData implements Module {
       // Store $setup
       $data = $this->modules->getConfig($this->className);
       $data['setup'] = $setup;
-      $data['names'] = $names;
       $this->modules->saveConfig($this->className, $data);
 
       return true;
@@ -217,22 +192,7 @@ class PageMaker extends WireData implements Module {
     $p->save();
 
     return $p;
-  }
-/**
- * Get live name from handle
- *
- * @param String $handle The name of a variable storing the name of an element we're creating
- * @param Array $names The array of handle => name pairs
- * @return String $elmt The element to name
- */
-  protected function nameFromHandle($handle, $names, $elmt) {
-
-    $name = $names[$handle];
-    if(is_null($name)){
-      throw new WireException(__LINE__ . ": Unable to create $elmt as name was not provided");
-    }
-    return $name;
-  }  
+  } 
 /**
  * !!!!! Remove all created pages and associated fields, fieldgroups and templates - this is not currently called on uninstall 
  * 
@@ -244,9 +204,7 @@ class PageMaker extends WireData implements Module {
  */
   public function removePages($recursive=false, $report_pg_errs=true) {
 
-    // $data = $this->modules->getConfig($this->className);
     $setup = $this->setup;
-    $names = $this->names;
     $errors = array();
 
     if(count($errors)) {
@@ -274,13 +232,13 @@ class PageMaker extends WireData implements Module {
     }
     foreach ($setup['templates'] as $t => $spec) {
       
-      $curr_t = $this->templates->get($names[$t]);
+      $curr_t = $this->templates->get($t);
       if( $curr_t !== null) {
         $rm_fldgrp = $curr_t->fieldgroup;
         wire('templates')->delete($curr_t);
         wire('fieldgroups')->delete($rm_fldgrp);  
       } else {
-        $errors[] = $names[$t];
+        $errors[] = $t;
       }
     }
     if(count($errors)) {
@@ -288,11 +246,11 @@ class PageMaker extends WireData implements Module {
       $errors = array();
     }
     foreach($setup['fields'] as $f => $spec) {
-      $curr_f = wire('fields')->get($names[$f]);
+      $curr_f = wire('fields')->get($f);
       if($curr_f !== null) {
         wire('fields')->delete($curr_f);
       } else {
-        $errors[] = $names[$f];
+        $errors[] = $f;
       }
     }
     if(count($errors)) {
