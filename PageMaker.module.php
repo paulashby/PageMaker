@@ -300,9 +300,10 @@ class PageMaker extends WireData implements Module {
     }
   }
 /**
- * Compare the number of url segments
+ * Compare the number of two url segments
  *  
- * @param String $a The array of pages to sort
+ * @param String $a
+ * @param String $b
  */
   protected function cmpNumURLsegs($a, $b) {
 
