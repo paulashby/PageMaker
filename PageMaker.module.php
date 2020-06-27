@@ -202,7 +202,7 @@ class PageMaker extends WireData implements Module {
  * @param Boolean $report_pg_errs should unfound pages trigger error?
  * @return String error message if there are live pages else Boolean success depending on whether all expected items can be found 
  */
-  public function removePages($recursive=false, $report_pg_errs=true) {
+  public function removeAll($recursive=false, $report_pg_errs=true) {
 
     $setup = $this->setup;
     $errors = array();
@@ -282,7 +282,7 @@ class PageMaker extends WireData implements Module {
 
     if($this->rmv_created === 1) {
 
-      $pages_removed = $this->removePages();
+      $pages_removed = $this->removeAll();
 
     }
   }
