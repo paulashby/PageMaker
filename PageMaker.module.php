@@ -77,9 +77,11 @@ class PageMaker extends WireData implements Module {
         $spec['name'] = $key;
         $this->makeTemplate($spec);
       }
-      foreach ($setup['templates'] as $key => $spec) {
-        $spec['name'] = $key;
-        $this->setTemplateFamily($spec);
+      if($this->config->version('3.0.153')) {
+        foreach ($setup['templates'] as $key => $spec) {
+          $spec['name'] = $key;
+          $this->setTemplateFamily($spec);
+        }
       }
       foreach ($setup['pages'] as $key => $spec) {
         $spec['name'] = $key;
