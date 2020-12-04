@@ -140,7 +140,6 @@ class PageMaker extends WireData implements Module {
     $t = new Template();
     $t->name = $spec['name'];
     $t->fieldgroup = $fg;
-    $t->save();
     if(array_key_exists('t_access', $spec)) {
       // t_access array contains one or more of the following role arrays: 'view', 'edit', 'create', 'add'
       $t->useRoles = 1;
@@ -148,6 +147,7 @@ class PageMaker extends WireData implements Module {
         $t->setRoles($roles, $access_type);
       }
     }
+    $t->save();
     return $t;
   }
 /**
