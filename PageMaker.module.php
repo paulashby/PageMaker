@@ -5,61 +5,91 @@ class PageMaker extends WireData implements Module {
       "title" => "Page Maker",
       "summary" => "Provides the ability to create and manage a set of pages",
       "author" => "Paul Ashby, primitive.co",
-      "version" => 1.1
+      "version" => 1.1,
+      "singular" => true,
+      'autoload' => true
     ];
   }
 
   public function init() {
-     $this->addHookAfter("Modules::uninstall", $this, "customUninstall");
+
+    $this->addHookBefore("Modules::uninstall", $this, "customUninstall");
   }
 /**
- * Check there are no naming collisions before completing installation
+ * Check there are no naming collisions before making pages
  *
  * @param Array $setup Array of elements to check ["fields" Array of strings , "templates" Array of strings]
  * @return Array of errors or boolean true
  */
-  protected function preflightInstall($setup) {
+  protected function preflightMakePages($setup) {
 
     $errors = array(
       "page_set" => array(),
+      "pages" => array(),
       "fields" => array(),
       "templates" => array()
     );
 
     // check it's OK to replace pre-existing page_set
-    if($setup["replace_existing"] !== true 
-      && isset($this["page_sets"]) 
-      && isset($this["page_sets"][$setup["set_name"]])){
+    if($this->retainExisting($setup)){
         $errors["page_set"][] = $setup["set_name"];
     }
 
-    // Check if fields exist
-    foreach($setup["fields"] as $f => $spec) {
-      $curr_f = wire("fields")->get($f);
-      
-      if($curr_f !== null) {
-        $errors["fields"][] = $f;
+    // Check we're not overwriting existing pages
+    foreach($setup["pages"] as $p => $spec) {
+      $page_path = $spec["parent"] . $p;
+      $curr_p = wire("pages")->get($page_path);
+      if($curr_p->id) {
+        $errors["pages"][] = $p;
       }
     }
 
-    foreach ($setup["templates"] as $t => $spec) {
-      $curr_t = $this->templates->get($t);
+    // Check we're not overwriting existing fields or templates
+    $errors["fields"] = $this->checkPageElement("fields", $setup["fields"]);
+    $errors["templates"] = $this->checkPageElement("templates", $setup["templates"]);
 
-      if( $curr_t !== null) {
-        $errors["templates"][] = $t;
+    // return $errors;
+    $mssgs = array();
+    foreach ($errors as $elmts => $elnames) {
+      if(count($elnames)){
+        $mssgs[] = "The following $elmts could not be created as they already exist: " .implode(", ", $elnames);
       }
     }
-    if(count($errors["fields"]) || count($errors["templates"])) {
-      // return $errors;
-      $mssgs = array();
-      foreach ($errors as $elmts => $elnames) {
-        if(count($elnames)){
-          $mssgs[] = "The following $elmts could not be created as they already exist: " .implode(", ", $elnames);
-        }
-      }
-      return $mssgs;
+    if(count($mssgs)) {
+      return $mssgs; 
     }
     return true;
+  }
+/**
+ * Check whether we can overwrite a existing set with the same name
+ *
+ * @param Array $setup Spec for proposed set
+ * @return Boolean
+ */
+  protected function retainExisting($setup) {
+    // Replace_existing is false and a page_set called $setup["set_name name"] already exists
+    return $setup["replace_existing"] !== true && isset($this["page_sets"]) && isset($this["page_sets"][$setup["set_name"]]);
+  }
+/** 
+ * Check whether field or template exists
+ *
+ * @param String $elmt_type Name of element type (plural)
+ * @param Array $setup Spec for elements of given type
+ * @return Boolean
+ */
+  protected function checkPageElement($elmt_type, $setup) {
+
+    $errors = array();
+
+    // Check we're not overwriting existing fields
+    foreach($setup as $elmt => $spec) {
+      $curr_elmt = wire($elmt_type)->get($elmt);
+      
+      if($curr_elmt !== null) {
+        $errors[] = $elmt;
+      }
+    }
+    return $errors;
   }
 /**
  * Create set of pages
@@ -75,14 +105,15 @@ class PageMaker extends WireData implements Module {
  */
   public function makePages($set_name, $setup, $replace_existing = false, $survive_uninstall = false) {
 
-    $installable = $this->preflightInstall(array(
+    $makeable = $this->preflightMakePages(array(
       "set_name" => $set_name,
-      "replace_existing" => $replace_existing,
+      "pages" => $setup["pages"], 
       "fields" => $setup["fields"], 
-      "templates" => $setup["templates"]
+      "templates" => $setup["templates"],
+      "replace_existing" => $replace_existing
     ));
 
-    if($installable === true){
+    if($makeable === true){
 
       foreach ($setup["fields"] as $key => $spec) {
         $spec["name"] = $key;//$pec is name, fieldtype and label
@@ -115,8 +146,8 @@ class PageMaker extends WireData implements Module {
       return true;
 
     } else {
-      // preflightInstall will return array of errors: ("fields"=>[], "templates")
-      return $installable;
+      // preflightMakePages will return array of errors: ("fields"=>[], "templates")
+      return $makeable;
     }
   }
 /**
@@ -171,6 +202,23 @@ class PageMaker extends WireData implements Module {
     return $t;
   }
 /**
+ * Create a new page
+ *
+ * @param Array $spec [string "template" - name of template, string "parent" - path of parent page, string "title", string "name"]
+ * @return Object The new page
+ */
+  public function makePage($spec) {
+
+    $p = $this->wire(new Page());
+    $p->template = $spec["template"]; 
+    $p->parent = $spec["parent"];
+    $p->name = $spec["name"];
+    $p->title = $spec["title"];
+    $p->save();
+
+    return $p;
+  } 
+/**
  * Apply family settings to template to restrict permitted parent and child templates
  *
  * @param Array $spec [string "name", array "t_parents" [string Template name], array "t_children "[string Template name], array "t_fields" [string Field name]]
@@ -205,24 +253,7 @@ class PageMaker extends WireData implements Module {
     return true;
   }
 /**
- * Create a new page
- *
- * @param Array $spec [string "template" - name of template, string "parent" - path of parent page, string "title", string "name"]
- * @return Object The new page
- */
-  public function makePage($spec) {
-
-    $p = $this->wire(new Page());
-    $p->template = $spec["template"]; 
-    $p->parent = $spec["parent"];
-    $p->name = $spec["name"];
-    $p->title = $spec["title"];
-    $p->save();
-
-    return $p;
-  } 
-  /**
- * !!!!! Remove all created pages and associated fields, fieldgroups and templates - this is called on uninstall only if rmv_created is checked
+ * Remove all created pages and associated fields, fieldgroups and templates - this is called on uninstall only if rmv_created is checked
  * 
  * Assumes it's safe to remove this data
  * Does not delete page sets whose survive_uninstall value is true
@@ -230,20 +261,22 @@ class PageMaker extends WireData implements Module {
  * @param Boolean $report_pg_errs Should unfound pages or templates/fields repurposed for user-created pages trigger error?
  * @return String Error message if there are live pages else Boolean success depending on whether all expected items can be found 
  */
-  public function removeAll($report_pg_errs = true) {
+  public function removeAll($report_pg_errs = true, $uninstalling = false) {
 
     $page_sets = $this->page_sets;
 
+    if(is_null($page_sets)) return;
+
     foreach ($page_sets as $page_set => $spec) {
-
-      if( ! $spec["survive_uninstall"]){
-
-        $this->removeSet($page_set, $report_pg_errs);
+      
+      if($uninstalling && $spec["survive_uninstall"]) {
+        continue;
       }
+      $this->removeSet($page_set, $report_pg_errs);
     }
   }
 /**
- * !!!!! Remove set of pages and associated fields, fieldgroups and templates
+ * Remove set of pages and associated fields, fieldgroups and templates
  * 
  * Assumes it's safe to remove this data (inlcuding any child pages that may have been added)
  *  
@@ -255,97 +288,13 @@ class PageMaker extends WireData implements Module {
     
     $setup = $this["page_sets"][$page_set]["setup"];
 
-    $errors = array();
-    $keep = array();
-
     // Sort page array according to path depth so we're deleting children first
     uasort($setup["pages"], array($this, "cmpNumURLsegs"));
 
-    // Delete pages in given set
-    foreach ($setup["pages"] as $p => $spec) {
+    $this->removePages($setup["pages"], $report_pg_errs);
+    $this->removeTemplates($setup["templates"]);
+    $this->removeFields($setup["fields"]);
 
-      $p_path = $spec["parent"] . $p;
-      $curr_p = $this->pages->get($p_path);
-
-      if($curr_p->id){
-        
-        // Delete page and children
-        $curr_p->delete(true);
-      } else if($report_pg_errs) {
-        $errors[] = $spec["title"];
-      }
-    }
-    if(count($errors)) {
-      $this->error("The following pages could not be removed as they could not be found: " . implode(", ", $errors));
-      $errors = array();
-    }
-    
-    // Remove unused templates. Show error for any still in use
-    foreach ($setup["templates"] as $t => $spec) {
-      
-      $curr_t = $this->templates->get($t);
-      
-      if( $curr_t !== null) {
-
-        $in_use = wire("pages")->find("template={$t}");
-
-        // Make sure template hasn't been used on any other pages
-        if($in_use->count()){
-
-          // Template is in use even though we've deleted all the pages in the set
-          if( ! in_array($t, $keep)){
-            $keep[] = $t;
-          }
-
-        } else {
-          $rm_fldgrp = $curr_t->fieldgroup;
-          wire("templates")->delete($curr_t);
-          wire("fieldgroups")->delete($rm_fldgrp);
-        } 
-      } else {
-        $errors[] = $t;
-      }
-    }
-    if(count($errors)) {
-
-      // Report unfound templates
-      $this->error("The following templates could not be removed as they could not be found: " . implode(", ", $errors));
-      $errors = array();
-    }
-
-    // Report templates in use by pages other than this set
-    if(count($keep)){
-      $this->error("The following templates are still in use and cannot be removed: " . implode(", ", $keep));
-    }
-
-    foreach($setup["fields"] as $f => $spec) {
-
-      $curr_f = wire("fields")->get($f);
-
-      if($curr_f !== null) {
-
-        $f_templates = $curr_f->getTemplates();
-        $in_use = $f_templates->count();
-
-        if( ! $in_use){
-          wire("fields")->delete($curr_f);
-        } else {
-          $used_on = array();
-          foreach ($f_templates as $key => $template) {
-            $used_on[] = $template->name;
-          }
-          // Report that field is in use by remaining templates
-          $this->error("The {$curr_f->name} field could not be removed as it is in use on the following templates: " . implode(", ", $used_on));
-        }
-      } else {
-        $errors[] = $f;
-      }
-    }
-    if(count($errors)) {
-
-      // Report unfound fields
-      $this->error("The following fields were not be deleted as they could not be found: " . implode(", ", $errors));
-    } 
     // Remove page_set record
     $data = $this->modules->getConfig($this->className);
     unset($data["page_sets"][$page_set]);
@@ -367,15 +316,127 @@ class PageMaker extends WireData implements Module {
     }
     return ($a_count > $b_count) ? -1 : 1;
   }
-  public function customUninstall($event) {
+/**
+ * !!!!! Remove given pages
+ * 
+ * Assumes it's safe to remove this data (inlcuding any child pages that may have been added)
+ *  
+ * @param String $pages The pages to remove 
+ * @param Boolean $report_pg_errs Should unfound pages or templates/fields repurposed for user-created pages trigger error?
+ */
+  protected function removePages($pages, $report_pg_errs) {
 
+    $errors = array();
+
+    // Delete pages in given set
+    foreach ($pages as $p => $spec) {
+
+      $p_path = $spec["parent"] . $p;
+      $curr_p = $this->pages->get($p_path);
+
+      if($curr_p->id){
+        // Delete page and children
+        $curr_p->delete(true);
+      } else if($report_pg_errs) {
+        $errors[] = $spec["title"];
+      }
+    }
+    if(count($errors)) {
+      $this->error("The following pages could not be removed as they could not be found: " . implode(", ", $errors));
+    }
+  }
+/**
+ * Remove given templates
+ *   
+ * @param String $templates The templates to remove 
+ */
+  protected function removeTemplates($templates) {
+
+    $errors = array();
+    $keep = array();
+
+    // Remove unused templates. Show error for any still in use
+    foreach ($templates as $t => $spec) {
+      
+      $curr_t = $this->templates->get($t);
+      
+      if( $curr_t !== null) {
+
+        $in_use = count(wire("pages")->find("template={$t}"));
+
+        // Make sure template hasn't been used on any other pages
+        if($in_use){
+
+          // Template is in use even though we've deleted all the pages in the set
+          if( ! in_array($t, $keep)){
+            $keep[] = $t;
+          }
+
+        } else {
+          $rm_fldgrp = $curr_t->fieldgroup;
+          wire("templates")->delete($curr_t);
+          wire("fieldgroups")->delete($rm_fldgrp);
+        } 
+      } else {
+        $errors[] = $t;
+      }
+    }
+    if(count($errors)) {
+      // Report unfound templates
+      $this->error("The following templates could not be removed as they could not be found: " . implode(", ", $errors));
+      $errors = array();
+    }
+
+    // Report templates in use by pages other than this set
+    if(count($keep)){
+      $this->error("The following templates are still in use and cannot be removed: " . implode(", ", $keep));
+    }
+  }
+/**
+ * Remove given fields
+ *  
+ * @param String $fields The fields to remove 
+ */
+  protected function removeFields($fields) {
+
+    $errors = array();
+
+    foreach($fields as $f => $spec) {
+
+      $curr_f = wire("fields")->get($f);
+
+      if($curr_f !== null) {
+
+        $f_templates = $curr_f->getTemplates();
+        $in_use = $f_templates->count();
+
+        if($in_use){
+
+          $used_on = array();
+          foreach ($f_templates as $key => $template) {
+            $used_on[] = $template->name;
+          }
+          // Report that field is in use by remaining templates
+          $this->error("The {$curr_f->name} field could not be removed as it is in use on the following templates: " . implode(", ", $used_on));
+        } else {
+          wire("fields")->delete($curr_f);
+        }
+      } else {
+        $errors[] = $f;
+      }
+    }
+    if(count($errors)) {
+      // Report unfound fields
+      $this->error("The following fields were not be deleted as they could not be found: " . implode(", ", $errors));
+    } 
+  }
+  public function customUninstall($event) {
+    
     $class = $event->arguments(0);
     if($class !== $this->className) return;
-
+    
     if($this->rmv_created === 1) {
-
-      $pages_removed = $this->removeAll();
-
+      $pages_removed = $this->removeAll(true, true);
     }
   }
 }
