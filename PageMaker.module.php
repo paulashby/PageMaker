@@ -261,7 +261,7 @@ class PageMaker extends WireData implements Module {
  * @param Boolean $report_pg_errs Should unfound pages or templates/fields repurposed for user-created pages trigger error?
  * @return String Error message if there are live pages else Boolean success depending on whether all expected items can be found 
  */
-  public function removeAll($report_pg_errs = true, $uninstalling = false) {
+  protected function removeAll($report_pg_errs = true, $uninstalling = false) {
 
     $page_sets = $this->page_sets;
 
