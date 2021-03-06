@@ -116,7 +116,7 @@ class PageMaker extends WireData implements Module {
     if($makeable === true){
 
       foreach ($setup["fields"] as $key => $spec) {
-        $spec["name"] = $key;//$pec is name, fieldtype and label
+        $spec["name"] = $key; //$spec is name, fieldtype, label and config (array of Strings)
         $this->makeField($spec);
       }
       foreach ($setup["templates"] as $key => $spec) { 
@@ -153,10 +153,29 @@ class PageMaker extends WireData implements Module {
 /**
  * Make a field
  *
- * @param Array $spec [string "name", string "fieldtype", string "label"]
+ * @param Array $spec [string "name", string "fieldtype", string "label", array "config" [string Function name]]
  * @return Object The new field
  */
   protected function makeField($spec) {
+
+    $config_functions = array(
+      "ck_editor" => function($f){
+         // Set Inputfield Type to CKEditor
+        $f->set('inputfieldClass', 'InputfieldCKEditor');
+      },
+      "html_ee" => function($f){
+        // Set Text Formatter to HTML Entity Encoder
+        $f->set("textformatters", array("TextformatterEntities"));
+      },
+      "markup" => function($f){
+        // Set Content Type to Markup/HTML
+        $f->set("contentType", 1);
+      },
+      "image" => function($f){
+        // Set extensions
+        $f->set("extensions", "gif jpg jpeg png");
+      }
+    );
 
     $f = $this->fields->get($spec["name"]);
 
@@ -166,6 +185,13 @@ class PageMaker extends WireData implements Module {
       $f->type = $spec["fieldtype"];
       $f->name = $spec["name"];
       $f->label = $spec["label"];
+
+      if(array_key_exists("config", $spec)){
+        // Perform required configurations using $config_functions
+        foreach ($spec["config"] as $fnc) {
+          $config_functions[$fnc]($f);
+        }
+      }
       $f->save();
     }
     return $f;
@@ -204,7 +230,7 @@ class PageMaker extends WireData implements Module {
 /**
  * Create a new page
  *
- * @param Array $spec [string "template" - name of template, string "parent" - path of parent page, string "title", string "name"]
+ * @param Array $spec [string "template" - name of template, string "parent" - path of parent page, string "title", string "name", array "status" [string Status name]]
  * @return Object The new page
  */
   public function makePage($spec) {
@@ -214,6 +240,12 @@ class PageMaker extends WireData implements Module {
     $p->parent = $spec["parent"];
     $p->name = $spec["name"];
     $p->title = $spec["title"];
+    if(array_key_exists("status", $spec)){
+      // Add each status included in $status array
+      foreach ($spec["status"] as $status) {
+        $p->addStatus($status);
+      }
+    }
     $p->save();
 
     return $p;
@@ -259,7 +291,7 @@ class PageMaker extends WireData implements Module {
  * Does not delete page sets whose survive_uninstall value is true
  *  
  * @param Boolean $report_pg_errs Should unfound pages or templates/fields repurposed for user-created pages trigger error?
- * @return String Error message if there are live pages else Boolean success depending on whether all expected items can be found 
+ * @param Boolean $uninstalling
  */
   protected function removeAll($report_pg_errs = true, $uninstalling = false) {
 
@@ -282,7 +314,6 @@ class PageMaker extends WireData implements Module {
  *  
  * @param String $page_set The page set to remove 
  * @param Boolean $report_pg_errs Should unfound pages or templates/fields repurposed for user-created pages trigger error?
- * @return String error message if there are live pages else Boolean success depending on whether all expected items can be found 
  */
   public function removeSet($page_set, $report_pg_errs = true) {
     
