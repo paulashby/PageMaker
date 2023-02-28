@@ -1,26 +1,26 @@
 # PageMaker
 
-  [<img src="https://img.shields.io/badge/License-MIT-yellow.svg">](https://opensource.org/licenses/MIT)
+[<img src="https://img.shields.io/badge/License-MIT-yellow.svg">](https://opensource.org/licenses/MIT)
 
-  ## Table of Contents
+## Table of Contents
 
-  [Description](#description)<br />[Installation](#installation)<br />[Usage](#usage)<br />[Contributing](#contributing)<br />[Tests](#tests)<br />[License](#license)<br />[Questions](#questions)<br />
+[Description](#description)<br />[Installation](#installation)<br />[Usage](#usage)<br />[Contributing](#contributing)<br />[Tests](#tests)<br />[License](#license)<br />[Questions](#questions)<br />
 
-  ## Description
+## Description
 
-  Module for the [Processwire](https://processwire.com) Content Management System to simplify the process of creating multiple interdependent pages, templates and fields.
-  
-  ## Installation
-  
-  Firstly, download and install the latest version of [Processwire](https://processwire.com). Download the PageMaker folder and place in your /site/modules directory.<br /><br />Log into your site as an admin and go the Modules page. Select the Site tab and click the Install button on the PageMaker module entry.<br /><br />By default, the module will leave all created fields, templates and pages in place when it is uninstalled. If you'd prefer to remove all created items on uninstall, go to the module settings page and check the "Remove pages on uninstall" checkbox.
-  
-  ## Usage
-  
-  Load the module in your php file<br />
-  ```$page_maker = $this->modules->get("PageMaker");```<br />
-  
-  Create a named set of pages<br />
-  ```$page_maker->makePages("my_pages", $setup, true, true);```<br />
+Module for the [Processwire](https://processwire.com) Content Management System to simplify the process of creating multiple interdependent pages, templates and fields.
+
+## Installation
+
+Firstly, download and install the latest version of [Processwire](https://processwire.com). Download the PageMaker folder and place in your /site/modules directory.<br /><br />Log into your site as an admin and go the Modules page. Select the Site tab and click the Install button on the PageMaker module entry.<br /><br />By default, the module will leave all created fields, templates and pages in place when it is uninstalled. If you'd prefer to remove all created items on uninstall, go to the module settings page and check the "Remove pages on uninstall" checkbox.
+
+## Usage
+
+Load the module in your php file<br />
+```$page_maker = $this->modules->get("PageMaker");```<br />
+
+Create a named set of pages<br />
+```$page_maker->makePages("my_pages", $setup, true, true);```<br />
 
 Parameters for the makePages method:
 - **set_name** - string: the name of the page set
@@ -55,12 +55,12 @@ Parameters for the makePages method:
       - **"ck_editor"** - set Inputfield Type to CKEditor
       - **"html_ee"** - set Text Formatter to HTML Entity Encoder
       - **"markup"** - set Content Type to Markup/HTML
-      - **"image"** - set accepted file types to gif, jpeg or png<br /><br />
+      - **"image"** - set accepted file types to gif, jpeg or png<br />
     #### **The *templates* array**
     Associative array containing details of every template required for the pages you're creating. Key is the name of the new template, value an associative array providing the following:
     - **t_fields** - an array of field name strings - these will be added to the template<br />
     - **t_parents** - an array of template name strings - only those listed will be permitted as parents of the new template<br />
-    - **t_children** - an array of template name strings - only those listed will be permitted as children of the new template<br /><br />
+    - **t_children** - an array of template name strings - only those listed will be permitted as children of the new template<br />
     #### **The *pages* array**
     Associative array containing details of every page you're creating. Key is the name of the new page (which will be used internally by Processwire), value an associative array providing the following:
     - **template** - string: the name of the template to use for the new page<br />
@@ -71,18 +71,18 @@ Parameters for the makePages method:
 - **survive_uninstall** - boolean: leave in place when module is uninstalled, regardless of the module settings.<br />
  
   
-  ## Contributing
-  
-  If you would like to make a contribution to the app, simply fork the repository and submit a Pull Request. If I like it, I may include it in the codebase.
-  
-  ## Tests
-  
-  N/A
-  
-  ## License
-  
-  Released under the [MIT](https://opensource.org/licenses/MIT) license.
-  
-  ## Questions
-  
-  Feel free to [email me](mailto:paul@primitive.co?subject=PageMaker%20query%20from%20GitHub) with any queries. If you'd like to see some of my other projects, my GitHub user name is [paulashby](https://github.com/paulashby).
+## Contributing
+
+If you would like to make a contribution to the app, simply fork the repository and submit a Pull Request. If I like it, I may include it in the codebase.
+
+## Tests
+
+N/A
+
+## License
+
+Released under the [MIT](https://opensource.org/licenses/MIT) license.
+
+## Questions
+
+Feel free to [email me](mailto:paul@primitive.co?subject=PageMaker%20query%20from%20GitHub) with any queries. If you'd like to see some of my other projects, my GitHub user name is [paulashby](https://github.com/paulashby).
